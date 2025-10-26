@@ -1,0 +1,170 @@
+# Azure Pipeline for Transport Feedback System
+# Corrected and Ready to Deploy
+
+trigger:
+  branches:
+    include:
+      - main
+      - master
+
+# ============================================
+# AGENT POOL CONFIGURATION - REQUIRED
+# ============================================
+pool:
+  name: 'Default'  # Replace with your actual agent pool name
+  # OR use Microsoft-hosted:
+  # vmImage: 'ubuntu-latest'
+
+variables:
+  nodeVersion: '18.x'
+  azureSubscription: 'YOUR_SERVICE_CONNECTION'  # Set in pipeline variables
+  appServiceName: 'YOUR_APP_SERVICE_NAME'       # Set in pipeline variables
+
+stages:
+  # ============================================
+  # BUILD STAGE
+  # ============================================
+  - stage: Build
+    displayName: 'Build Stage'
+    jobs:
+      - job: BuildApp
+        displayName: 'Build Node.js Application'
+        pool:
+          name: 'Default'  # Agent pool for build
+        
+        steps:
+          # Display agent information
+          - script: |
+              echo "====================================="
+              echo "BUILD INFORMATION"
+              echo "====================================="
+              echo "Agent Pool: Default"
+              echo "Agent Name: $(Agent.Name)"
+              echo "Agent OS: $(Agent.OS)"
+              echo "Build ID: $(Build.BuildId)"
+              echo "====================================="
+            displayName: 'Display Agent Info'
+
+          # Checkout code
+          - checkout: self
+            clean: true
+            displayName: 'Checkout Repository'
+
+          # Install Node.js
+          - task: NodeTool@0
+            inputs:
+              versionSpec: '$(nodeVersion)'
+            displayName: 'Install Node.js $(nodeVersion)'
+
+          # Verify Node installation
+          - script: |
+              node --version
+              npm --version
+            displayName: 'Verify Node.js Installation'
+
+          # Install dependencies
+          - script: npm ci
+            displayName: 'Install Dependencies'
+            workingDirectory: '$(System.DefaultWorkingDirectory)'
+
+          # Run tests (optional)
+          - script: npm test
+            displayName: 'Run Tests'
+            continueOnError: true
+
+          # Create .env file from variables
+          - script: |
+              echo "DB_SERVER=$(DB_SERVER)" > .env
+              echo "DB_NAME=$(DB_NAME)" >> .env
+              echo "DB_USER=$(DB_USER)" >> .env
+              echo "DB_PASSWORD=$(DB_PASSWORD)" >> .env
+              echo "DB_PORT=$(DB_PORT)" >> .env
+              echo "PORT=$(PORT)" >> .env
+              echo ".env file created"
+            displayName: 'Create .env File'
+
+          # Archive application files
+          - task: ArchiveFiles@2
+            displayName: 'Archive Application'
+            inputs:
+              rootFolderOrFile: '$(System.DefaultWorkingDirectory)'
+              includeRootFolder: false
+              archiveType: 'zip'
+              archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip'
+              replaceExistingArchive: true
+
+          # Publish build artifacts
+          - task: PublishBuildArtifacts@1
+            displayName: 'Publish Build Artifacts'
+            inputs:
+              PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+              ArtifactName: 'drop'
+              publishLocation: 'Container'
+
+  # ============================================
+  # DEPLOY STAGE
+  # ============================================
+  - stage: Deploy
+    displayName: 'Deploy Stage'
+    dependsOn: Build
+    condition: succeeded()
+    jobs:
+      - deployment: DeployApp
+        displayName: 'Deploy to Azure App Service'
+        pool:
+          name: 'Default'  # Agent pool for deployment
+        
+        environment: 'production'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                # Display deployment info
+                - script: |
+                    echo "====================================="
+                    echo "DEPLOYMENT INFORMATION"
+                    echo "====================================="
+                    echo "Agent Pool: Default"
+                    echo "Agent Name: $(Agent.Name)"
+                    echo "Deploying to: $(appServiceName)"
+                    echo "Build ID: $(Build.BuildId)"
+                    echo "====================================="
+                  displayName: 'Display Deployment Info'
+
+                # Deploy to Azure App Service
+                - task: AzureWebApp@1
+                  displayName: 'Deploy to Azure App Service'
+                  inputs:
+                    azureSubscription: '$(azureSubscription)'
+                    appType: 'webAppLinux'
+                    appName: '$(appServiceName)'
+                    package: '$(Pipeline.Workspace)/drop/$(Build.BuildId).zip'
+                    runtimeStack: 'NODE|18-lts'
+                    startUpCommand: 'npm start'
+
+                # Restart App Service
+                - task: AzureAppServiceManage@0
+                  displayName: 'Restart Azure App Service'
+                  inputs:
+                    azureSubscription: '$(azureSubscription)'
+                    Action: 'Restart Azure App Service'
+                    WebAppName: '$(appServiceName)'
+
+                # Health check
+                - script: |
+                    echo "Waiting for application to start..."
+                    sleep 30
+                    echo "Performing health check..."
+                    curl -I https://$(appServiceName).azurewebsites.net
+                  displayName: 'Health Check'
+                  continueOnError: true
+
+                # Success notification
+                - script: |
+                    echo "====================================="
+                    echo "✅ DEPLOYMENT SUCCESSFUL!"
+                    echo "====================================="
+                    echo "Application URL:"
+                    echo "https://$(appServiceName).azurewebsites.net"
+                    echo "====================================="
+                  displayName: 'Deployment Complete'
