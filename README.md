@@ -183,6 +183,4 @@ transport-feedback/
 MIT
 
 ## Author
-
->>>>>>> a3ab75a711ea6b9fc4aff52012b283739e7f76c4
 Manick Vishal
