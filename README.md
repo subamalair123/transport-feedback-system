@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # College Transport Feedback System
 
 A comprehensive web-based feedback system for managing college transport services with real-time data analytics.
