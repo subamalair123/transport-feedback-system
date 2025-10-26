@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Dependencies
 node_modules/
 package-lock.json
@@ -22,7 +21,7 @@ desktop.ini
 .vscode/
 .idea/
 *.swp
-*.swo
+.*.swo
 *~
 
 # Build outputs
@@ -36,43 +35,4 @@ temp/
 *.tmp
 
 # Azure
-=======
-# Dependencies
-node_modules/
-package-lock.json
-
-# Environment variables (CRITICAL - Never commit!)
-.env
-.env.local
-.env.production
-
-# Logs
-*.log
-npm-debug.log*
-logs/
-
-# OS Files
-.DS_Store
-Thumbs.db
-desktop.ini
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# Build outputs
-dist/
-build/
-*.zip
-
-# Temporary files
-tmp/
-temp/
-*.tmp
-
-# Azure
->>>>>>> a3ab75a711ea6b9fc4aff52012b283739e7f76c4
 .azure/
