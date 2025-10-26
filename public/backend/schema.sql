@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 -- Transport Feedback System Database Schema
 -- Azure SQL Database
 
