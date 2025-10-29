@@ -1,0 +1,25 @@
+trigger:
+- main
+
+# also run the pipeline for any pull request
+pr:
+- '*'
+
+pool:
+  name: Default
+
+steps:
+- checkout: self
+  clean: true               # delete the workspace before checkout
+  persistCredentials: true  # keep auth working for PR refs
+  fetchDepth: 0             # fetch full history to avoid merge-ref errors
+
+- task: NodeTool@0
+  inputs:
+    versionSpec: '20.x'
+  displayName: 'Install Node.js 20.x'
+
+- script: |
+    npm install
+    npm run build
+  displayName: 'npm install and build'
