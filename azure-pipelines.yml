@@ -6,6 +6,7 @@ pool:
 
 steps:
 - checkout: self
+  clean: true
 
 - task: NodeTool@0
   inputs:
@@ -14,6 +15,11 @@ steps:
 
 - script: |
     npm install
-    npm run build
-  displayName: 'Install dependencies and build'
+  displayName: 'Install dependencies'
+
+# (Optional) To ensure server runs properly
+- script: |
+    node server-azure.js
+  displayName: 'Start server for testing'
+
 
